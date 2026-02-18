@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Instant Share</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <!-- Theme Toggle (ONLY ONE) -->
+        <div class="theme-toggle">
+            <button id="themeToggle">🌙</button>
+        </div>
+
+        <div class="logo">
+            <img src="{{ url_for('static', filename='logo.svg') }}">
+            <span class="logo-text">InstantShare</span>
+        </div>
+
+
+
+        <p class="subtitle">Secure • Temporary • Anonymous</p>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('upload')">Upload</button>
+            <button class="tab" onclick="switchTab('download')">Download</button>
+        </div>
+
+        <!-- ================= UPLOAD SECTION ================= -->
+        <div id="upload" class="tab-content active">
+
+            <form id="uploadForm">
+
+                <div id="dropArea" class="drop-area">
+                    <p>Drag & Drop file here</p>
+                    <p>or</p>
+                    <label class="file-label">
+                        Choose File
+                        <input type="file" name="file" id="fileInput" multiple hidden required>
+                    </label>
+                </div>
+
+                <!-- File Preview -->
+                <div id="filePreview" class="file-preview hidden">
+                    <div>
+                        <div id="fileName"></div>
+                        <div id="fileInfo"></div>
+                    </div>
+                    <button type="button" id="removeFile">Remove</button>
+                </div>
+
+                <!-- Progress Bar -->
+                <div id="progressContainer" class="progress-container hidden">
+                    <div id="progressBar" class="progress-bar"></div>
+                </div>
+
+                <button type="submit">Upload File</button>
+
+            </form>
+
+            <!-- Success Result -->
+            <div id="resultBox" class="success-box hidden">
+                <h3>File Uploaded!</h3>
+
+                <div class="code-box">
+                    <span id="generatedCode"></span>
+                    <button type="button" id="copyCodeBtn">Copy</button>
+                </div>
+
+                <img id="qrImage" width="200">
+
+                <button type="button" id="copyLinkBtn">Copy Download Link</button>
+
+                <p>⏳ Expires in: <span id="countdown">05:00</span></p>
+            </div>
+
+        </div>
+
+        <!-- ================= DOWNLOAD SECTION ================= -->
+        <div id="download" class="tab-content">
+            <form action="/download" method="POST">
+                <input type="text" id="downloadCodeInput" name="code" placeholder="Enter 6-digit code" required>
+                <button type="submit">Download</button>
+            </form>
+        </div>
+
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+
+</body>
+
+</html>

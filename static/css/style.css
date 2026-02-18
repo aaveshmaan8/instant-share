@@ -1,0 +1,380 @@
+/* ================= THEME VARIABLES ================= */
+:root {
+    --bg-main: #0f172a;
+    --bg-card: #111827;
+    --bg-secondary: #1e293b;
+    --bg-input: #0f172a;
+
+    --text-main: #e2e8f0;
+    --text-muted: #94a3b8;
+
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+
+    --danger: #dc2626;
+    --success: #16a34a;
+
+    --border: #334155;
+}
+
+/* Light Theme */
+body.light {
+    --bg-main: #f1f5f9;
+    --bg-card: #ffffff;
+    --bg-secondary: #e2e8f0;
+    --bg-input: #f8fafc;
+
+    --text-main: #0f172a;
+    --text-muted: #475569;
+
+    --border: #cbd5e1;
+}
+
+
+/* ================= GLOBAL ================= */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg-main);
+    color: var(--text-main);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+
+/* ================= CONTAINER ================= */
+.container {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    background: var(--bg-card);
+    padding: 35px;
+    border-radius: 18px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+    transition: 0.3s ease;
+}
+
+h1 {
+    text-align: center;
+    margin: 0;
+    font-size: 26px;
+}
+
+.subtitle {
+    text-align: center;
+    color: var(--text-muted);
+    margin-top: 6px;
+    margin-bottom: 28px;
+    font-size: 14px;
+}
+
+
+/* ================= THEME TOGGLE ================= */
+.theme-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+.theme-toggle button {
+    width: auto;
+    padding: 6px 10px;
+    font-size: 14px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-main);
+}
+
+
+/* ================= INPUTS ================= */
+input[type="text"],
+input[type="file"] {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg-input);
+    color: var(--text-main);
+    font-size: 14px;
+    transition: 0.2s;
+}
+
+input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+
+/* ================= BUTTONS ================= */
+button {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+
+/* ================= TABS ================= */
+.tabs {
+    display: flex;
+    margin-bottom: 25px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg-secondary);
+}
+
+
+.tab {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-weight: 500;
+    transition: 0.2s;
+}
+
+.tab.active {
+    background: var(--primary);
+    color: white;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+
+/* ================= DROP AREA ================= */
+.drop-area {
+    border: 2px dashed rgba(148, 163, 184, 0.3);
+    padding: 35px;
+    border-radius: 14px;
+    text-align: center;
+    background: var(--bg-secondary);
+    transition: 0.3s ease;
+    margin-bottom: 18px;
+}
+
+
+.drop-area.dragover {
+    border-color: var(--primary);
+    background: var(--bg-secondary);
+}
+
+.file-label {
+    display: inline-block;
+    padding: 8px 16px;
+    background: var(--primary);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    margin-top: 8px;
+    color: white;
+}
+
+
+/* ================= FILE PREVIEW ================= */
+.file-preview {
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    animation: fadeIn 0.3s ease;
+}
+
+.file-preview button {
+    background: var(--danger);
+    padding: 6px 10px;
+    font-size: 12px;
+    width: auto;
+}
+
+
+/* ================= PROGRESS BAR ================= */
+.progress-container {
+    width: 100%;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    margin-top: 15px;
+    height: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--primary), #3b82f6);
+    transition: width 0.2s ease;
+}
+
+
+/* ================= RESULT BOX ================= */
+.success-box {
+    margin-top: 25px;
+    background: var(--bg-input);
+    padding: 20px;
+    border-radius: 14px;
+    text-align: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.code-box {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.code-box button {
+    width: auto;
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.success-box img {
+    width: 180px;
+    margin: 15px auto;
+    display: block;
+}
+
+.success-box p {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+
+/* ================= ERROR ================= */
+.error {
+    color: var(--danger);
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+
+/* ================= TOAST ================= */
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--bg-secondary);
+    color: var(--text-main);
+    padding: 14px 20px;
+    border-radius: 10px;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 999;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast.success {
+    background: var(--success);
+    color: white;
+}
+
+.toast.error {
+    background: var(--danger);
+    color: white;
+}
+
+
+/* ================= UTILITIES ================= */
+.hidden {
+    display: none;
+}
+
+
+/* ================= ANIMATIONS ================= */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 520px) {
+    .container {
+        padding: 25px;
+        margin: 20px;
+    }
+
+    .success-box img {
+        width: 140px;
+    }
+}
+
+
+body::before {
+    content: "";
+    position: fixed;
+    top: -200px;
+    left: -200px;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(37,99,235,0.15), transparent 70%);
+    z-index: -1;
+}
+.logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.logo img {
+    width: 48px;
+    filter: drop-shadow(0 0 10px rgba(37,99,235,0.6));
+}
+
+.logo-text {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-main);
+}
