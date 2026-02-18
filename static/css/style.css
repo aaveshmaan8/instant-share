@@ -1,15 +1,15 @@
-/* ================= THEME VARIABLES ================= */
+/* ================= DESIGN SYSTEM ================= */
 :root {
     --bg-main: #0f172a;
     --bg-card: #111827;
-    --bg-secondary: #1e293b;
+    --bg-surface: #1e293b;
     --bg-input: #0f172a;
 
     --text-main: #e2e8f0;
     --text-muted: #94a3b8;
 
-    --primary: #2563eb;
-    --primary-hover: #1d4ed8;
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
 
     --danger: #dc2626;
     --success: #16a34a;
@@ -17,11 +17,11 @@
     --border: #334155;
 }
 
-/* Light Theme */
+/* ================= LIGHT MODE ================= */
 body.light {
     --bg-main: #f1f5f9;
     --bg-card: #ffffff;
-    --bg-secondary: #e2e8f0;
+    --bg-surface: #e2e8f0;
     --bg-input: #f8fafc;
 
     --text-main: #0f172a;
@@ -29,7 +29,6 @@ body.light {
 
     --border: #cbd5e1;
 }
-
 
 /* ================= GLOBAL ================= */
 * {
@@ -45,36 +44,58 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    transition: background 0.3s ease, color 0.3s ease;
-}
-
-
-/* ================= CONTAINER ================= */
-.container {
-    position: relative;
-    width: 100%;
-    max-width: 480px;
-    background: var(--bg-card);
-    padding: 35px;
-    border-radius: 18px;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
     transition: 0.3s ease;
 }
 
-h1 {
-    text-align: center;
-    margin: 0;
-    font-size: 26px;
+/* Subtle background glow */
+body::before {
+    content: "";
+    position: fixed;
+    top: -200px;
+    left: -200px;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(59,130,246,0.15), transparent 70%);
+    z-index: -1;
 }
 
+/* ================= CONTAINER ================= */
+.container {
+    width: 100%;
+    max-width: 500px;
+    background: var(--bg-card);
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.45);
+    position: relative;
+}
+
+/* ================= LOGO ================= */
+.logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.logo img {
+    width: 46px;
+    filter: drop-shadow(0 0 12px rgba(59,130,246,0.5));
+}
+
+.logo-text {
+    font-size: 22px;
+    font-weight: 600;
+}
+
+/* ================= SUBTITLE ================= */
 .subtitle {
     text-align: center;
     color: var(--text-muted);
-    margin-top: 6px;
     margin-bottom: 28px;
     font-size: 14px;
 }
-
 
 /* ================= THEME TOGGLE ================= */
 .theme-toggle {
@@ -84,19 +105,64 @@ h1 {
 }
 
 .theme-toggle button {
-    width: auto;
     padding: 6px 10px;
-    font-size: 14px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
     border-radius: 8px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    cursor: pointer;
+}
+
+/* ================= TOP TABS ================= */
+.top-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 25px;
+}
+
+.top-tab {
+    flex: 1;
+    padding: 15px 0;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 15px;
+    cursor: pointer;
+    position: relative;
+    transition: 0.2s;
+}
+
+.top-tab:hover {
     color: var(--text-main);
 }
 
+.top-tab.active {
+    color: #38bdf8;
+}
 
-/* ================= INPUTS ================= */
-input[type="text"],
-input[type="file"] {
+.top-tab.active::after {
+    content: "";
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: #38bdf8;
+    border-radius: 3px;
+}
+
+/* ================= TAB CONTENT CONTROL ================= */
+.tab-content {
+    display: none;
+    animation: fadeIn 0.25s ease;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* ================= INPUT ================= */
+input[type="text"] {
     width: 100%;
     padding: 12px;
     border-radius: 10px;
@@ -104,7 +170,6 @@ input[type="file"] {
     background: var(--bg-input);
     color: var(--text-main);
     font-size: 14px;
-    transition: 0.2s;
 }
 
 input[type="text"]:focus {
@@ -112,8 +177,7 @@ input[type="text"]:focus {
     border-color: var(--primary);
 }
 
-
-/* ================= BUTTONS ================= */
+/* ================= BUTTON ================= */
 button {
     width: 100%;
     padding: 12px;
@@ -122,9 +186,8 @@ button {
     background: var(--primary);
     color: white;
     font-weight: 600;
-    font-size: 14px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: 0.2s ease;
 }
 
 button:hover {
@@ -136,127 +199,67 @@ button:active {
     transform: translateY(0);
 }
 
-
-/* ================= TABS ================= */
-.tabs {
-    display: flex;
-    margin-bottom: 25px;
-    border-radius: 12px;
-    overflow: hidden;
-    background: var(--bg-secondary);
-}
-
-
-.tab {
-    flex: 1;
-    padding: 10px;
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-weight: 500;
-    transition: 0.2s;
-}
-
-.tab.active {
-    background: var(--primary);
-    color: white;
-}
-
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-
 /* ================= DROP AREA ================= */
 .drop-area {
-    border: 2px dashed rgba(148, 163, 184, 0.3);
-    padding: 35px;
-    border-radius: 14px;
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 40px 20px;
     text-align: center;
-    background: var(--bg-secondary);
+    background: var(--bg-surface);
     transition: 0.3s ease;
-    margin-bottom: 18px;
+    cursor: pointer;
+    margin-bottom: 20px;
 }
-
 
 .drop-area.dragover {
     border-color: var(--primary);
-    background: var(--bg-secondary);
+    background: rgba(59,130,246,0.08);
 }
 
 .file-label {
     display: inline-block;
+    margin-top: 10px;
     padding: 8px 16px;
+    border-radius: 8px;
     background: var(--primary);
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
-    margin-top: 8px;
     color: white;
-}
-
-
-/* ================= FILE PREVIEW ================= */
-.file-preview {
-    margin-top: 12px;
-    padding: 12px;
-    background: var(--bg-secondary);
-    border-radius: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     font-size: 13px;
-    animation: fadeIn 0.3s ease;
+    cursor: pointer;
 }
 
-.file-preview button {
-    background: var(--danger);
-    padding: 6px 10px;
-    font-size: 12px;
-    width: auto;
-}
-
-
-/* ================= PROGRESS BAR ================= */
+/* ================= PROGRESS ================= */
 .progress-container {
     width: 100%;
-    background: var(--bg-secondary);
-    border-radius: 10px;
-    margin-top: 15px;
     height: 10px;
+    background: var(--bg-surface);
+    border-radius: 8px;
+    margin-top: 15px;
     overflow: hidden;
 }
 
 .progress-bar {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, var(--primary), #3b82f6);
+    background: linear-gradient(90deg, var(--primary), #60a5fa);
     transition: width 0.2s ease;
 }
 
-
-/* ================= RESULT BOX ================= */
+/* ================= RESULT ================= */
 .success-box {
     margin-top: 25px;
-    background: var(--bg-input);
-    padding: 20px;
-    border-radius: 14px;
+    padding: 25px;
+    border-radius: 16px;
+    background: var(--bg-surface);
     text-align: center;
-    animation: fadeIn 0.3s ease;
 }
 
 .code-box {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 10px;
-    font-size: 22px;
-    font-weight: bold;
+    gap: 12px;
+    font-size: 20px;
+    font-weight: 600;
     margin-bottom: 15px;
 }
 
@@ -267,7 +270,7 @@ button:active {
 }
 
 .success-box img {
-    width: 180px;
+    width: 170px;
     margin: 15px auto;
     display: block;
 }
@@ -277,28 +280,18 @@ button:active {
     color: var(--text-muted);
 }
 
-
-/* ================= ERROR ================= */
-.error {
-    color: var(--danger);
-    text-align: center;
-    margin-bottom: 12px;
-}
-
-
 /* ================= TOAST ================= */
 .toast {
     position: fixed;
     top: 20px;
     right: 20px;
-    background: var(--bg-secondary);
-    color: var(--text-main);
     padding: 14px 20px;
     border-radius: 10px;
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+    background: var(--bg-surface);
+    color: var(--text-main);
     opacity: 0;
     transform: translateY(-10px);
-    transition: all 0.3s ease;
+    transition: 0.3s ease;
     z-index: 999;
 }
 
@@ -317,25 +310,16 @@ button:active {
     color: white;
 }
 
-
-/* ================= UTILITIES ================= */
+/* ================= UTIL ================= */
 .hidden {
     display: none;
 }
 
-
-/* ================= ANIMATIONS ================= */
+/* ================= ANIMATION ================= */
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(5px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
-
 
 /* ================= RESPONSIVE ================= */
 @media (max-width: 520px) {
@@ -345,36 +329,22 @@ button:active {
     }
 
     .success-box img {
-        width: 140px;
+        width: 130px;
     }
 }
-
-
-body::before {
-    content: "";
-    position: fixed;
-    top: -200px;
-    left: -200px;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(37,99,235,0.15), transparent 70%);
-    z-index: -1;
-}
-.logo {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    margin-bottom: 10px;
+.or-text {
+    color: var(--text-muted);
+    font-size: 13px;
 }
 
-.logo img {
-    width: 48px;
-    filter: drop-shadow(0 0 10px rgba(37,99,235,0.6));
-}
-
-.logo-text {
-    font-size: 24px;
+.file-name {
+    font-size: 16px;
     font-weight: 600;
-    color: var(--text-main);
+    margin-bottom: 5px;
 }
+
+.file-size {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
