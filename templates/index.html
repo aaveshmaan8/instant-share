@@ -42,18 +42,17 @@
 
                 <!-- Default State -->
                 <div id="dropDefault">
-                    <p>Drag & Drop file here</p>
+                    <p>Drag & Drop files here</p>
                     <p class="or-text">or</p>
                     <label class="file-label">
-                        Select File
-                        <input type="file" name="file" id="fileInput" hidden required>
+                        Select Files
+                        <input type="file" name="file" id="fileInput" multiple hidden>
                     </label>
                 </div>
 
                 <!-- Preview State -->
                 <div id="dropPreview" class="hidden">
-                    <div class="file-name" id="fileName"></div>
-                    <div class="file-size" id="fileInfo"></div>
+                    <div id="fileName"></div>
                 </div>
 
             </div>
@@ -67,16 +66,18 @@
 
         </form>
 
-        <!-- Result Box (Only After Upload) -->
+        <!-- ================= RESULT BOX ================= -->
         <div id="resultBox" class="success-box hidden">
-            <div class="code-box">
-                <span id="generatedCode"></span>
-                <button type="button" id="copyCodeBtn">Copy</button>
-            </div>
+
+            <!-- Code will be injected by JS -->
+            <div id="generatedCode"></div>
+
+            <div id="fileCount" class="file-count"></div>
 
             <img id="qrImage" alt="QR Code">
 
             <p>Expires in <span id="countdown">05:00</span></p>
+
         </div>
 
     </div>
@@ -93,10 +94,10 @@
 
 </div>
 
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
-
 <!-- Toast -->
-<div id="toast" class="toast hidden"></div>
+<div id="toast" class="toast"></div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
 </body>
 </html>

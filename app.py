@@ -2,7 +2,7 @@ import os
 from flask import Flask, render_template, request, jsonify
 from config import MAX_FILE_SIZE, SECRET_KEY, DEBUG
 from database import init_db
-from services.file_service import save_file, process_download, generate_qr
+from services.file_service import save_files, process_download, generate_qr
 
 
 # ================= APP INIT =================
@@ -55,36 +55,35 @@ def download_direct(code):
     return response
 
 
-# ================= AJAX UPLOAD =================
+# ================= AJAX MULTIPLE UPLOAD =================
 @app.route("/upload_ajax", methods=["POST"])
 def upload_ajax():
 
     files = request.files.getlist("file")
 
-    if not files:
-        return jsonify({"error": "No file selected!"}), 400
+    if not files or files[0].filename == "":
+        return jsonify({
+            "success": False,
+            "error": "No files uploaded"
+        })
 
-    codes = []
+    # 🔥 Save all files under ONE code
+    code, error = save_files(files)
 
-    for file in files:
+    if error:
+        return jsonify({
+            "success": False,
+            "error": error
+        })
 
-        if file.filename == "":
-            return jsonify({"error": "Invalid file."}), 400
-
-        code, error = save_file(file)
-
-        if error:
-            return jsonify({"error": error}), 400
-
-        download_url = request.url_root + "download_direct/" + code
-        generate_qr(download_url, code)
-
-        codes.append(code)
+    # Generate QR
+    download_url = request.url_root + "download_direct/" + code
+    generate_qr(download_url, code)
 
     return jsonify({
         "success": True,
-        "codes": codes
-    }), 200
+        "code": code
+    })
 
 
 # ================= ERROR HANDLERS =================

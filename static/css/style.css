@@ -281,34 +281,42 @@ button:active {
 }
 
 /* ================= TOAST ================= */
+/* ================= TOAST ================= */
 .toast {
     position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 14px 20px;
-    border-radius: 10px;
-    background: var(--bg-surface);
-    color: var(--text-main);
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    padding: 14px 22px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
     opacity: 0;
-    transform: translateY(-10px);
-    transition: 0.3s ease;
-    z-index: 999;
+    transition: all 0.3s ease;
+    z-index: 9999;
+    min-width: 220px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
 }
 
+/* Visible state */
 .toast.show {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(-50%) translateY(0);
 }
 
+/* Success */
 .toast.success {
-    background: var(--success);
+    background: linear-gradient(135deg, #16a34a, #22c55e);
     color: white;
 }
 
+/* Error */
 .toast.error {
-    background: var(--danger);
+    background: linear-gradient(135deg, #dc2626, #ef4444);
     color: white;
 }
+
 
 /* ================= UTIL ================= */
 .hidden {
