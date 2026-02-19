@@ -17,37 +17,34 @@ def get_connection():
 
 # ================= INITIALIZE DATABASE =================
 def init_db():
-    with get_connection() as conn:
-        cursor = conn.cursor()
+    conn = get_connection()
+    cursor = conn.cursor()
 
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS files (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                code TEXT UNIQUE NOT NULL,
-                filename TEXT NOT NULL,
-                original_name TEXT NOT NULL,
-                upload_time INTEGER NOT NULL,
-                expires_at INTEGER NOT NULL,
-                downloads INTEGER DEFAULT 0
-            )
-        """)
-
-        # Indexes for performance
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_files_code ON files(code)"
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            filename TEXT NOT NULL,
+            original_name TEXT NOT NULL,
+            upload_time INTEGER NOT NULL,
+            expires_at INTEGER NOT NULL,
+            downloads INTEGER DEFAULT 0,
+            created_date TEXT NOT NULL,
+            uploader_ip TEXT,
+            downloader_ip TEXT,
+            file_size INTEGER DEFAULT 0
         )
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_files_expires ON files(expires_at)"
-        )
+    """)
 
-        conn.commit()
+    conn.commit()
+    conn.close()
 
 
-# ================= CLEANUP EXPIRED FILES =================
+# ================= CLEANUP EXPIRED FILES (DB ONLY) =================
 def cleanup_expired_files(current_time):
     """
     Deletes expired DB records.
-    NOTE: File deletion should be handled in file_service.
+    File deletion handled in file_service.
     """
     with get_connection() as conn:
         cursor = conn.cursor()

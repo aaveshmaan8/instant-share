@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Login - InstantShare</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Logo -->
+    <div class="logo">
+        <img src="{{ url_for('static', filename='logo.svg') }}">
+        <span class="logo-text">InstantShare</span>
+    </div>
+
+    <p class="subtitle">Admin Dashboard Access</p>
+
+    {% if error %}
+        <div class="error-box">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <form method="POST" class="admin-form">
+
+        <input 
+            type="text" 
+            name="username" 
+            placeholder="Username" 
+            required
+        >
+
+        <input 
+            type="password" 
+            name="password" 
+            placeholder="Password" 
+            required
+        >
+
+        <button type="submit">
+            Login to Dashboard
+        </button>
+
+    </form>
+
+    <div style="text-align:center; margin-top:15px;">
+        <a href="/" style="color:var(--primary); text-decoration:none;">
+            ← Back to Home
+        </a>
+    </div>
+
+</div>
+
+</body>
+</html>

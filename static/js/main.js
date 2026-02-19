@@ -1,5 +1,6 @@
 // ================= TAB SWITCH =================
 function switchTab(tabName) {
+
     const uploadTab = document.getElementById("uploadTab");
     const downloadTab = document.getElementById("downloadTab");
     const uploadSection = document.getElementById("upload");
@@ -44,11 +45,9 @@ function formatSize(bytes) {
 
 // ================= FILE PREVIEW =================
 function showPreview(files) {
-    if (!fileNameEl) return;
 
     dropDefault.classList.add("hidden");
     dropPreview.classList.remove("hidden");
-
     fileNameEl.innerHTML = "";
 
     Array.from(files).forEach(file => {
@@ -63,9 +62,7 @@ function showPreview(files) {
 if (dropArea && fileInput) {
 
     dropArea.addEventListener("click", (e) => {
-        if (e.target.tagName !== "LABEL") {
-            fileInput.click();
-        }
+        if (e.target.tagName !== "LABEL") fileInput.click();
     });
 
     dropArea.addEventListener("dragover", (e) => {
@@ -99,9 +96,10 @@ if (dropArea && fileInput) {
 if (uploadForm && fileInput) {
 
     uploadForm.addEventListener("submit", function (e) {
+
         e.preventDefault();
 
-        if (!fileInput.files || fileInput.files.length === 0) {
+        if (!fileInput.files.length) {
             showToast("Please upload at least one file.", "error");
             return;
         }
@@ -114,58 +112,52 @@ if (uploadForm && fileInput) {
         const xhr = new XMLHttpRequest();
         xhr.open("POST", "/upload_ajax", true);
 
-        if (progressContainer && progressBar) {
-            progressContainer.classList.remove("hidden");
-            progressBar.style.width = "0%";
-        }
+        progressContainer.classList.remove("hidden");
+        progressBar.style.width = "0%";
 
         xhr.upload.onprogress = function (e) {
             if (e.lengthComputable) {
-                const percent = (e.loaded / e.total) * 100;
-                progressBar.style.width = percent + "%";
+                progressBar.style.width =
+                    ((e.loaded / e.total) * 100) + "%";
             }
         };
 
         xhr.onload = function () {
-            if (xhr.status === 200) {
 
-                const response = JSON.parse(xhr.responseText);
-
-                if (response.success && response.code) {
-
-                    const code = response.code;
-
-                    generatedCode.innerHTML = `
-                        <div class="code-display">
-                            <span class="main-code">${code}</span>
-                            <button class="copy-btn" onclick="copyCode('${code}')">Copy</button>
-                        </div>
-                        <div class="file-count">
-                            ${fileInput.files.length} file(s) uploaded
-                        </div>
-                    `;
-
-                    // Refresh QR image (prevent cache)
-                    qrImage.src = `/static/${code}.png?${Date.now()}`;
-
-                    resultBox.classList.remove("hidden");
-
-                    startCountdown(300);
-
-                    showToast("Files uploaded successfully!", "success");
-
-                } else {
-                    showToast(response.error || "Upload failed.", "error");
-                }
-
-            } else {
+            if (xhr.status !== 200) {
                 showToast("Upload failed.", "error");
+                return;
             }
+
+            const response = JSON.parse(xhr.responseText);
+
+            if (!response.success) {
+                showToast(response.error || "Upload failed.", "error");
+                return;
+            }
+
+            const code = response.code;
+
+            generatedCode.innerHTML = `
+                <div class="code-display">
+                    <span class="main-code">${code}</span>
+                    <button class="copy-btn" onclick="copyCode('${code}')">
+                        Copy
+                    </button>
+                </div>
+                <div class="file-count">
+                    ${fileInput.files.length} file(s) uploaded
+                </div>
+            `;
+
+            qrImage.src = `/static/${code}.png?${Date.now()}`;
+            resultBox.classList.remove("hidden");
+
+            startCountdown(300);
+            showToast("Files uploaded successfully!", "success");
         };
 
-        xhr.onerror = function () {
-            showToast("Network error.", "error");
-        };
+        xhr.onerror = () => showToast("Network error.", "error");
 
         xhr.send(formData);
     });
@@ -177,13 +169,11 @@ let countdownInterval = null;
 
 function startCountdown(duration) {
 
-    if (countdownInterval) {
-        clearInterval(countdownInterval);
-    }
+    if (countdownInterval) clearInterval(countdownInterval);
 
     let timer = duration;
 
-    countdownInterval = setInterval(function () {
+    countdownInterval = setInterval(() => {
 
         const minutes = Math.floor(timer / 60);
         const seconds = timer % 60;
@@ -203,10 +193,59 @@ function startCountdown(duration) {
 }
 
 
-// ================= COPY CODE =================
+// ================= COPY =================
 function copyCode(code) {
     navigator.clipboard.writeText(code);
     showToast("Code copied!", "success");
+}
+
+
+// ================= DOWNLOAD HANDLER =================
+const downloadForm = document.querySelector("#download form");
+
+if (downloadForm) {
+
+    downloadForm.addEventListener("submit", function (e) {
+
+        e.preventDefault();
+
+        const codeInput = downloadForm.querySelector("input[name='code']");
+        const code = codeInput.value.trim().toUpperCase();
+
+        if (!code || code.length !== 6) {
+            showToast("Invalid download code.", "error");
+            return;
+        }
+
+        fetch(`/download_direct/${code}`)
+            .then(res => {
+
+                const contentType = res.headers.get("content-type") || "";
+
+                if (contentType.includes("application/json")) {
+                    return res.json().then(data => {
+                        throw new Error(data.error || "Invalid code");
+                    });
+                }
+
+                return res.blob();
+            })
+            .then(blob => {
+
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+
+            })
+            .catch(err => {
+                showToast(err.message || "Download failed", "error");
+            });
+
+    });
 }
 
 
@@ -217,7 +256,7 @@ function showToast(message, type = "success") {
     if (!toast) return;
 
     toast.textContent = message;
-    toast.className = "toast show " + type;
+    toast.className = `toast show ${type}`;
 
     setTimeout(() => {
         toast.classList.remove("show");

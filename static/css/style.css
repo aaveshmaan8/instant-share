@@ -47,7 +47,6 @@ body {
     transition: 0.3s ease;
 }
 
-/* Subtle background glow */
 body::before {
     content: "";
     position: fixed;
@@ -113,7 +112,7 @@ body::before {
     cursor: pointer;
 }
 
-/* ================= TOP TABS ================= */
+/* ================= TABS ================= */
 .top-tabs {
     display: flex;
     border-bottom: 1px solid var(--border);
@@ -129,11 +128,6 @@ body::before {
     font-size: 15px;
     cursor: pointer;
     position: relative;
-    transition: 0.2s;
-}
-
-.top-tab:hover {
-    color: var(--text-main);
 }
 
 .top-tab.active {
@@ -151,10 +145,9 @@ body::before {
     border-radius: 3px;
 }
 
-/* ================= TAB CONTENT CONTROL ================= */
+/* ================= TAB CONTENT ================= */
 .tab-content {
     display: none;
-    animation: fadeIn 0.25s ease;
 }
 
 .tab-content.active {
@@ -162,7 +155,8 @@ body::before {
 }
 
 /* ================= INPUT ================= */
-input[type="text"] {
+input[type="text"],
+input[type="password"] {
     width: 100%;
     padding: 12px;
     border-radius: 10px;
@@ -172,7 +166,7 @@ input[type="text"] {
     font-size: 14px;
 }
 
-input[type="text"]:focus {
+input:focus {
     outline: none;
     border-color: var(--primary);
 }
@@ -193,10 +187,6 @@ button {
 button:hover {
     background: var(--primary-hover);
     transform: translateY(-1px);
-}
-
-button:active {
-    transform: translateY(0);
 }
 
 /* ================= DROP AREA ================= */
@@ -224,7 +214,6 @@ button:active {
     background: var(--primary);
     color: white;
     font-size: 13px;
-    cursor: pointer;
 }
 
 /* ================= PROGRESS ================= */
@@ -244,7 +233,7 @@ button:active {
     transition: width 0.2s ease;
 }
 
-/* ================= RESULT ================= */
+/* ================= RESULT BOX ================= */
 .success-box {
     margin-top: 25px;
     padding: 25px;
@@ -253,20 +242,31 @@ button:active {
     text-align: center;
 }
 
-.code-box {
+/* New code layout */
+.code-display {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 12px;
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
 }
 
-.code-box button {
+.main-code {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.copy-btn {
     width: auto;
     padding: 6px 12px;
     font-size: 12px;
+}
+
+.file-count {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
 }
 
 .success-box img {
@@ -280,7 +280,6 @@ button:active {
     color: var(--text-muted);
 }
 
-/* ================= TOAST ================= */
 /* ================= TOAST ================= */
 .toast {
     position: fixed;
@@ -299,34 +298,24 @@ button:active {
     box-shadow: 0 10px 30px rgba(0,0,0,0.35);
 }
 
-/* Visible state */
 .toast.show {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
 }
 
-/* Success */
 .toast.success {
     background: linear-gradient(135deg, #16a34a, #22c55e);
     color: white;
 }
 
-/* Error */
 .toast.error {
     background: linear-gradient(135deg, #dc2626, #ef4444);
     color: white;
 }
 
-
 /* ================= UTIL ================= */
 .hidden {
     display: none;
-}
-
-/* ================= ANIMATION ================= */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
 }
 
 /* ================= RESPONSIVE ================= */
@@ -340,19 +329,3 @@ button:active {
         width: 130px;
     }
 }
-.or-text {
-    color: var(--text-muted);
-    font-size: 13px;
-}
-
-.file-name {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 5px;
-}
-
-.file-size {
-    font-size: 14px;
-    color: var(--text-muted);
-}
-

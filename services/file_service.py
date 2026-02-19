@@ -4,6 +4,7 @@ import secrets
 import string
 import zipfile
 import qrcode
+
 from flask import send_file
 from werkzeug.utils import secure_filename
 
@@ -14,6 +15,7 @@ from config import (
     EXPIRY_TIME,
     MAX_DOWNLOADS
 )
+
 from database import get_connection
 
 
@@ -40,17 +42,17 @@ def cleanup_expired_files():
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT DISTINCT code FROM files WHERE expires_at < ?",
+            "SELECT code FROM files WHERE expires_at < ?",
             (current_time,)
         )
-        expired_codes = cursor.fetchall()
+        expired = cursor.fetchall()
 
-    for row in expired_codes:
+    for row in expired:
         delete_file(row["code"])
 
 
-# ================= SAVE MULTIPLE FILES (ONE CODE) =================
-def save_files(files):
+# ================= SAVE MULTIPLE FILES =================
+def save_files(files, uploader_ip):
 
     cleanup_expired_files()
 
@@ -63,17 +65,19 @@ def save_files(files):
 
     upload_time = int(time.time())
     expires_at = upload_time + EXPIRY_TIME
+    created_date = time.strftime("%Y-%m-%d")
+
+    total_size = 0
 
     try:
         for file in files:
 
-            # File size check
             file.seek(0, os.SEEK_END)
             size = file.tell()
             file.seek(0)
 
             if size > MAX_FILE_SIZE:
-                return None, "One of the files exceeds max size."
+                return None, "One file exceeds max size."
 
             filename = secure_filename(file.filename)
 
@@ -81,22 +85,31 @@ def save_files(files):
                 return None, "Invalid filename."
 
             file.save(os.path.join(folder_path, filename))
+            total_size += size
 
-        # Save ONE record in database
+        # Insert record into DB
         with get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO files
-                (code, filename, original_name, upload_time, expires_at, downloads)
-                VALUES (?, ?, ?, ?, ?, 0)
-            """, (code, code, "multiple_files", upload_time, expires_at))
+                (code, filename, original_name, upload_time, expires_at,
+                 downloads, created_date, uploader_ip, downloader_ip, file_size)
+                VALUES (?, ?, ?, ?, ?, 0, ?, ?, NULL, ?)
+            """, (
+                code,
+                code,  # folder name
+                "multiple_files",
+                upload_time,
+                expires_at,
+                created_date,
+                uploader_ip,
+                total_size
+            ))
             conn.commit()
 
-        # Generate QR
-        download_url = f"/download_direct/{code}"
-        generate_qr(download_url, code)
+        generate_qr(code)
 
-    except Exception as e:
+    except Exception:
         delete_file(code)
         return None, "Upload failed."
 
@@ -104,9 +117,10 @@ def save_files(files):
 
 
 # ================= GENERATE QR =================
-def generate_qr(download_url, code):
+def generate_qr(code):
     try:
-        full_url = f"http://127.0.0.1:5000{download_url}"
+        full_url = f"http://127.0.0.1:5000/download_direct/{code}"
+
         qr = qrcode.make(full_url)
 
         os.makedirs(STATIC_FOLDER, exist_ok=True)
@@ -118,7 +132,7 @@ def generate_qr(download_url, code):
 
 
 # ================= PROCESS DOWNLOAD =================
-def process_download(code):
+def process_download(code, downloader_ip):
 
     cleanup_expired_files()
 
@@ -128,47 +142,54 @@ def process_download(code):
         file_info = cursor.fetchone()
 
         if not file_info:
-            return None, "Invalid or expired code."
-
-        current_time = int(time.time())
-
-        if current_time > file_info["expires_at"]:
-            delete_file(code)
-            return None, "File expired."
+            return None, "Invalid or expired code!"
 
         if file_info["downloads"] >= MAX_DOWNLOADS:
             delete_file(code)
-            return None, "Download limit reached."
+            return None, "Download limit reached!"
 
         folder_path = os.path.join(UPLOAD_FOLDER, code)
 
         if not os.path.exists(folder_path):
             delete_file(code)
-            return None, "Files not found."
+            return None, "Files not found!"
 
-        # Increase download count
-        cursor.execute(
-            "UPDATE files SET downloads = downloads + 1 WHERE code = ?",
-            (code,)
-        )
+        # Update downloads + downloader IP
+        cursor.execute("""
+            UPDATE files
+            SET downloads = downloads + 1,
+                downloader_ip = ?
+            WHERE code = ?
+        """, (downloader_ip, code))
         conn.commit()
 
-    # Create ZIP
+    files = os.listdir(folder_path)
+
+    # ✅ SINGLE FILE
+    if len(files) == 1:
+
+        file_path = os.path.join(folder_path, files[0])
+
+        response = send_file(
+            file_path,
+            as_attachment=True,
+            download_name=files[0]
+        )
+
+        if MAX_DOWNLOADS == 1:
+            delete_file(code)
+
+        return response, None
+
+    # ✅ MULTIPLE FILES → ZIP
     zip_path = os.path.join(UPLOAD_FOLDER, f"{code}.zip")
 
-    try:
-        if os.path.exists(zip_path):
-            os.remove(zip_path)
-
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for filename in os.listdir(folder_path):
-                zipf.write(
-                    os.path.join(folder_path, filename),
-                    arcname=filename
-                )
-
-    except Exception:
-        return None, "Failed to create ZIP."
+    with zipfile.ZipFile(zip_path, 'w') as zipf:
+        for filename in files:
+            zipf.write(
+                os.path.join(folder_path, filename),
+                arcname=filename
+            )
 
     response = send_file(
         zip_path,
@@ -176,7 +197,6 @@ def process_download(code):
         download_name=f"{code}.zip"
     )
 
-    # Auto delete if single download allowed
     if MAX_DOWNLOADS == 1:
         delete_file(code)
 
@@ -190,13 +210,11 @@ def delete_file(code):
     zip_path = os.path.join(UPLOAD_FOLDER, f"{code}.zip")
     qr_path = os.path.join(STATIC_FOLDER, f"{code}.png")
 
-    # Remove DB record
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM files WHERE code = ?", (code,))
         conn.commit()
 
-    # Remove folder
     if os.path.exists(folder_path):
         for file in os.listdir(folder_path):
             try:
@@ -208,14 +226,12 @@ def delete_file(code):
         except:
             pass
 
-    # Remove ZIP
     if os.path.exists(zip_path):
         try:
             os.remove(zip_path)
         except:
             pass
 
-    # Remove QR
     if os.path.exists(qr_path):
         try:
             os.remove(qr_path)

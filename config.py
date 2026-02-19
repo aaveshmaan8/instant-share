@@ -10,8 +10,8 @@ STATIC_FOLDER = BASE_DIR / "static"
 DATABASE_PATH = BASE_DIR / "database.db"
 
 # Ensure required folders exist
-UPLOAD_FOLDER.mkdir(exist_ok=True)
-STATIC_FOLDER.mkdir(exist_ok=True)
+UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
+STATIC_FOLDER.mkdir(parents=True, exist_ok=True)
 
 # ================= FILE SETTINGS =================
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
@@ -23,10 +23,13 @@ ENV = os.environ.get("FLASK_ENV", "production")
 DEBUG = ENV == "development"
 
 # ================= SECURITY =================
-SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key")
+SECRET_KEY = os.environ.get("SECRET_KEY")
 
 if not SECRET_KEY:
-    # Fail fast in production
-    if ENV == "production":
-        raise RuntimeError("SECRET_KEY environment variable not set!")
+    # If running locally, auto-generate dev key
     SECRET_KEY = "dev-secret-key"
+
+
+# ================= ADMIN CONFIG =================
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")

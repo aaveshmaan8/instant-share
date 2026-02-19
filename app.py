@@ -1,19 +1,45 @@
 import os
-from flask import Flask, render_template, request, jsonify
-from config import MAX_FILE_SIZE, SECRET_KEY, DEBUG
-from database import init_db
-from services.file_service import save_files, process_download, generate_qr
+import time
 
+from flask import (
+    Flask,
+    render_template,
+    request,
+    jsonify,
+    redirect,
+    url_for,
+    session
+)
+
+from apscheduler.schedulers.background import BackgroundScheduler
+
+from config import (
+    MAX_FILE_SIZE,
+    SECRET_KEY,
+    DEBUG,
+    ADMIN_USERNAME,
+    ADMIN_PASSWORD
+)
+
+from database import init_db, get_connection
+
+from services.file_service import (
+    save_files,
+    process_download,
+    cleanup_expired_files
+)
 
 # ================= APP INIT =================
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE
 app.config["SECRET_KEY"] = SECRET_KEY
 
-
-# ================= INITIALIZE DATABASE =================
 init_db()
 
+# ================= AUTO CLEANUP (Every 60 seconds) =================
+scheduler = BackgroundScheduler()
+scheduler.add_job(cleanup_expired_files, "interval", seconds=60)
+scheduler.start()
 
 # ================= HOME =================
 @app.route("/")
@@ -21,41 +47,7 @@ def index():
     return render_template("index.html")
 
 
-# ================= HEALTH CHECK (Render Required) =================
-@app.route("/health")
-def health():
-    return jsonify({"status": "OK"}), 200
-
-
-# ================= DOWNLOAD =================
-@app.route("/download", methods=["POST"])
-def download():
-    code = request.form.get("code", "").strip().upper()
-
-    if not code or len(code) != 6:
-        return render_template("index.html", error="Invalid download code.")
-
-    response, error = process_download(code)
-
-    if error:
-        return render_template("index.html", error=error)
-
-    return response
-
-
-@app.route("/download_direct/<code>")
-def download_direct(code):
-    code = code.strip().upper()
-
-    response, error = process_download(code)
-
-    if error:
-        return error, 404
-
-    return response
-
-
-# ================= AJAX MULTIPLE UPLOAD =================
+# ================= AJAX UPLOAD =================
 @app.route("/upload_ajax", methods=["POST"])
 def upload_ajax():
 
@@ -64,11 +56,12 @@ def upload_ajax():
     if not files or files[0].filename == "":
         return jsonify({
             "success": False,
-            "error": "No files uploaded"
+            "error": "No files uploaded."
         })
 
-    # 🔥 Save all files under ONE code
-    code, error = save_files(files)
+    user_ip = request.remote_addr
+
+    code, error = save_files(files, user_ip)
 
     if error:
         return jsonify({
@@ -76,33 +69,157 @@ def upload_ajax():
             "error": error
         })
 
-    # Generate QR
-    download_url = request.url_root + "download_direct/" + code
-    generate_qr(download_url, code)
-
     return jsonify({
         "success": True,
         "code": code
     })
 
 
+# ================= DOWNLOAD (FORM) =================
+@app.route("/download", methods=["POST"])
+def download():
+
+    code = request.form.get("code", "").strip().upper()
+
+    if not code or len(code) != 6:
+        return render_template(
+            "index.html",
+            error="Invalid download code."
+        )
+
+    user_ip = request.remote_addr
+
+    response, error = process_download(code, user_ip)
+
+    if error:
+        return render_template(
+            "index.html",
+            error=error
+        )
+
+    return response
+
+
+# ================= DIRECT DOWNLOAD =================
+@app.route("/download_direct/<code>")
+def download_direct(code):
+
+    code = code.strip().upper()
+    user_ip = request.remote_addr
+
+    response, error = process_download(code, user_ip)
+
+    if error:
+        return "Invalid or expired code", 404
+
+    return response
+
+
+# ================= ADMIN LOGIN =================
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+
+    if request.method == "POST":
+
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            session["admin_logged_in"] = True
+            return redirect(url_for("admin_dashboard"))
+
+        return render_template(
+            "admin_login.html",
+            error="Invalid credentials"
+        )
+
+    return render_template("admin_login.html")
+
+
+# ================= ADMIN LOGOUT =================
+@app.route("/admin/logout")
+def admin_logout():
+    session.pop("admin_logged_in", None)
+    return redirect(url_for("admin_login"))
+
+
+# ================= ADMIN DASHBOARD =================
+@app.route("/admin")
+def admin_dashboard():
+
+    if not session.get("admin_logged_in"):
+        return redirect(url_for("admin_login"))
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    current_time = int(time.time())
+
+    # Total uploads
+    cursor.execute("SELECT COUNT(*) FROM files")
+    total_files = cursor.fetchone()[0]
+
+    # Total downloads
+    cursor.execute("SELECT SUM(downloads) FROM files")
+    total_downloads = cursor.fetchone()[0] or 0
+
+    # Active files
+    cursor.execute(
+        "SELECT COUNT(*) FROM files WHERE expires_at > ?",
+        (current_time,)
+    )
+    active_files = cursor.fetchone()[0]
+
+    # Expired files
+    cursor.execute(
+        "SELECT COUNT(*) FROM files WHERE expires_at < ?",
+        (current_time,)
+    )
+    expired_files = cursor.fetchone()[0]
+
+    # Most downloaded file
+    cursor.execute("""
+        SELECT code, downloads
+        FROM files
+        ORDER BY downloads DESC
+        LIMIT 1
+    """)
+    most_downloaded = cursor.fetchone()
+
+    conn.close()
+
+    return render_template(
+        "admin.html",
+        total_files=total_files,
+        total_downloads=total_downloads,
+        active_files=active_files,
+        expired_files=expired_files,
+        most_downloaded=most_downloaded
+    )
+
+
 # ================= ERROR HANDLERS =================
 @app.errorhandler(413)
 def file_too_large(e):
-    return jsonify({"error": "File too large! Max 20MB allowed."}), 413
-
-
-@app.errorhandler(404)
-def not_found(e):
-    return render_template("index.html", error="Page not found."), 404
+    return jsonify({
+        "success": False,
+        "error": "File too large."
+    }), 413
 
 
 @app.errorhandler(500)
 def server_error(e):
-    return render_template("index.html", error="Internal server error."), 500
+    return render_template(
+        "index.html",
+        error="Internal server error."
+    ), 500
 
 
 # ================= RUN SERVER =================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=DEBUG)
+    app.run(
+        host="0.0.0.0",
+        port=port,
+        debug=DEBUG
+    )
