@@ -183,7 +183,7 @@ def admin_dashboard():
     conn.close()
 
     return render_template(
-        "admin.html",
+        "admin_dashboard.html",
         total_files=total_files,
         total_downloads=total_downloads,
         active_files=active_files,

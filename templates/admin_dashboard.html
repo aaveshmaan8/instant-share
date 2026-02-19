@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard - InstantShare</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="container">
+
+    <h2 style="text-align:center;">Admin Dashboard</h2>
+
+    <div style="margin-top:30px;">
+
+        <p><strong>Total Uploads:</strong> {{ total_files }}</p>
+        <p><strong>Total Downloads:</strong> {{ total_downloads }}</p>
+        <p><strong>Active Files:</strong> {{ active_files }}</p>
+        <p><strong>Expired Files:</strong> {{ expired_files }}</p>
+        <p><strong>Total Storage Used:</strong> {{ total_storage }} MB</p>
+
+        {% if most_downloaded %}
+            <p>
+                <strong>Most Downloaded Code:</strong>
+                {{ most_downloaded['code'] }}
+                ({{ most_downloaded['downloads'] }} downloads)
+            </p>
+        {% else %}
+            <p>No downloads yet.</p>
+        {% endif %}
+
+    </div>
+
+    <div style="margin-top:30px;">
+        <a href="{{ url_for('admin_logout') }}">
+            <button>Logout</button>
+        </a>
+    </div>
+
+</div>
+
+</body>
+</html>
