@@ -11,8 +11,6 @@ from flask import (
     session
 )
 
-from apscheduler.schedulers.background import BackgroundScheduler
-
 from config import (
     MAX_FILE_SIZE,
     SECRET_KEY,
@@ -36,10 +34,6 @@ app.config["SECRET_KEY"] = SECRET_KEY
 
 init_db()
 
-# ================= AUTO CLEANUP (Every 60 seconds) =================
-scheduler = BackgroundScheduler()
-scheduler.add_job(cleanup_expired_files, "interval", seconds=60)
-scheduler.start()
 
 # ================= HOME =================
 @app.route("/")
