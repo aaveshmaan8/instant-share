@@ -16,7 +16,8 @@ from config import (
     SECRET_KEY,
     DEBUG,
     ADMIN_USERNAME,
-    ADMIN_PASSWORD
+    ADMIN_PASSWORD,
+    DATABASE_URL
 )
 
 from database import init_db, get_connection
@@ -33,6 +34,16 @@ app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE
 app.config["SECRET_KEY"] = SECRET_KEY
 
 init_db()
+
+
+# ================= HELPERS =================
+def is_postgres():
+    return bool(DATABASE_URL)
+
+def placeholder():
+    return "%s" if is_postgres() else "?"
+
+TABLE_NAME = "instantshare_files"
 
 
 # ================= HOME =================
@@ -54,7 +65,6 @@ def upload_ajax():
         })
 
     user_ip = request.remote_addr
-
     code, error = save_files(files, user_ip)
 
     if error:
@@ -82,7 +92,6 @@ def download():
         )
 
     user_ip = request.remote_addr
-
     response, error = process_download(code, user_ip)
 
     if error:
@@ -113,6 +122,10 @@ def download_direct(code):
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
 
+    # If already logged in → go to dashboard
+    if session.get("admin_logged_in"):
+        return redirect(url_for("admin_dashboard"))
+
     if request.method == "POST":
 
         username = request.form.get("username")
@@ -133,7 +146,7 @@ def admin_login():
 # ================= ADMIN LOGOUT =================
 @app.route("/admin/logout")
 def admin_logout():
-    session.pop("admin_logged_in", None)
+    session.clear()
     return redirect(url_for("admin_login"))
 
 
@@ -141,6 +154,7 @@ def admin_logout():
 @app.route("/admin")
 def admin_dashboard():
 
+    # 🔐 Protect route
     if not session.get("admin_logged_in"):
         return redirect(url_for("admin_login"))
 
@@ -154,8 +168,8 @@ def admin_dashboard():
     total_files = cursor.fetchone()[0]
 
     # Total downloads
-    cursor.execute("SELECT SUM(downloads) FROM files")
-    total_downloads = cursor.fetchone()[0] or 0
+    cursor.execute("SELECT COALESCE(SUM(downloads), 0) FROM files")
+    total_downloads = cursor.fetchone()[0]
 
     # Active files
     cursor.execute(
@@ -180,6 +194,11 @@ def admin_dashboard():
     """)
     most_downloaded = cursor.fetchone()
 
+    # Total storage used
+    cursor.execute("SELECT COALESCE(SUM(file_size), 0) FROM files")
+    total_storage = cursor.fetchone()[0]
+    total_storage_mb = round(total_storage / (1024 * 1024), 2)
+
     conn.close()
 
     return render_template(
@@ -188,25 +207,9 @@ def admin_dashboard():
         total_downloads=total_downloads,
         active_files=active_files,
         expired_files=expired_files,
-        most_downloaded=most_downloaded
+        most_downloaded=most_downloaded,
+        total_storage=total_storage_mb
     )
-
-
-# ================= ERROR HANDLERS =================
-@app.errorhandler(413)
-def file_too_large(e):
-    return jsonify({
-        "success": False,
-        "error": "File too large."
-    }), 413
-
-
-@app.errorhandler(500)
-def server_error(e):
-    return render_template(
-        "index.html",
-        error="Internal server error."
-    ), 500
 
 
 # ================= RUN SERVER =================

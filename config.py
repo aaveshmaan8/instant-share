@@ -33,3 +33,7 @@ if not SECRET_KEY:
 # ================= ADMIN CONFIG =================
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+

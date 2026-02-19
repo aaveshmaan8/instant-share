@@ -13,15 +13,28 @@ from config import (
     STATIC_FOLDER,
     MAX_FILE_SIZE,
     EXPIRY_TIME,
-    MAX_DOWNLOADS
+    MAX_DOWNLOADS,
+    DATABASE_URL
 )
 
 from database import get_connection
+
+TABLE_NAME = "files"
+
+
+# ================= HELPER =================
+def is_postgres():
+    return bool(DATABASE_URL)
+
+
+def placeholder():
+    return "%s" if is_postgres() else "?"
 
 
 # ================= GENERATE UNIQUE CODE =================
 def generate_code(length=6):
     characters = string.ascii_uppercase + string.digits
+    ph = placeholder()
 
     while True:
         code = ''.join(secrets.choice(characters) for _ in range(length))
@@ -29,7 +42,7 @@ def generate_code(length=6):
         with get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT 1 FROM instantshare_files WHERE code = %s",
+                f"SELECT 1 FROM {TABLE_NAME} WHERE code = {ph}",
                 (code,)
             )
             exists = cursor.fetchone()
@@ -41,20 +54,22 @@ def generate_code(length=6):
 # ================= CLEANUP EXPIRED FILES =================
 def cleanup_expired_files():
     current_time = int(time.time())
+    ph = placeholder()
 
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT code FROM instantshare_files WHERE expires_at < %s",
+            f"SELECT code FROM {TABLE_NAME} WHERE expires_at < {ph}",
             (current_time,)
         )
         expired = cursor.fetchall()
 
     for row in expired:
-        delete_file(row[0])
+        code = row["code"] if not is_postgres() else row[0]
+        delete_file(code)
 
 
-# ================= SAVE MULTIPLE FILES =================
+# ================= SAVE FILES =================
 def save_files(files, uploader_ip):
 
     cleanup_expired_files()
@@ -71,10 +86,10 @@ def save_files(files, uploader_ip):
     created_date = time.strftime("%Y-%m-%d")
 
     total_size = 0
+    ph = placeholder()
 
     try:
         for file in files:
-
             file.seek(0, os.SEEK_END)
             size = file.tell()
             file.seek(0)
@@ -83,24 +98,23 @@ def save_files(files, uploader_ip):
                 return None, "One file exceeds max size."
 
             filename = secure_filename(file.filename)
-
             if not filename:
                 return None, "Invalid filename."
 
             file.save(os.path.join(folder_path, filename))
             total_size += size
 
-        # Insert record into PostgreSQL
         with get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO instantshare_files
+            cursor.execute(f"""
+                INSERT INTO {TABLE_NAME}
                 (code, filename, original_name, upload_time, expires_at,
                  downloads, created_date, uploader_ip, downloader_ip, file_size)
-                VALUES (%s, %s, %s, %s, %s, 0, %s, %s, NULL, %s)
+                VALUES ({ph}, {ph}, {ph}, {ph}, {ph},
+                        0, {ph}, {ph}, NULL, {ph})
             """, (
                 code,
-                code,  # folder name
+                code,
                 "multiple_files",
                 upload_time,
                 expires_at,
@@ -113,8 +127,9 @@ def save_files(files, uploader_ip):
         generate_qr(code)
 
     except Exception as e:
+        print("UPLOAD ERROR:", e)
         delete_file(code)
-        return None, "Upload failed."
+        return None, str(e)
 
     return code, None
 
@@ -123,26 +138,26 @@ def save_files(files, uploader_ip):
 def generate_qr(code):
     try:
         full_url = f"/download_direct/{code}"
-
         qr = qrcode.make(full_url)
 
         os.makedirs(STATIC_FOLDER, exist_ok=True)
         qr_path = os.path.join(STATIC_FOLDER, f"{code}.png")
         qr.save(qr_path)
 
-    except Exception:
-        pass
+    except Exception as e:
+        print("QR ERROR:", e)
 
 
 # ================= PROCESS DOWNLOAD =================
 def process_download(code, downloader_ip):
 
     cleanup_expired_files()
+    ph = placeholder()
 
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT * FROM instantshare_files WHERE code = %s",
+            f"SELECT * FROM {TABLE_NAME} WHERE code = {ph}",
             (code,)
         )
         file_info = cursor.fetchone()
@@ -150,44 +165,44 @@ def process_download(code, downloader_ip):
         if not file_info:
             return None, "Invalid or expired code!"
 
-        if file_info[5] >= MAX_DOWNLOADS:
-            delete_file(code)
-            return None, "Download limit reached!"
+        # Get downloads count properly
+        downloads = (
+            file_info["downloads"]
+            if not is_postgres()
+            else file_info[6]
+        )
 
         folder_path = os.path.join(UPLOAD_FOLDER, code)
 
         if not os.path.exists(folder_path):
-            delete_file(code)
             return None, "Files not found!"
 
-        # Update downloads + downloader IP
-        cursor.execute("""
-            UPDATE instantshare_files
+        # Update download count
+        cursor.execute(f"""
+            UPDATE {TABLE_NAME}
             SET downloads = downloads + 1,
-                downloader_ip = %s
-            WHERE code = %s
+                downloader_ip = {ph}
+            WHERE code = {ph}
         """, (downloader_ip, code))
         conn.commit()
 
     files = os.listdir(folder_path)
 
-    # ✅ SINGLE FILE
+    # SINGLE FILE
     if len(files) == 1:
-
         file_path = os.path.join(folder_path, files[0])
-
         response = send_file(
             file_path,
             as_attachment=True,
             download_name=files[0]
         )
 
-        if MAX_DOWNLOADS == 1:
-            delete_file(code)
+        if downloads + 1 >= MAX_DOWNLOADS:
+            delete_files_only(code)
 
         return response, None
 
-    # ✅ MULTIPLE FILES → ZIP
+    # MULTIPLE FILES → ZIP
     zip_path = os.path.join(UPLOAD_FOLDER, f"{code}.zip")
 
     with zipfile.ZipFile(zip_path, 'w') as zipf:
@@ -203,26 +218,18 @@ def process_download(code, downloader_ip):
         download_name=f"{code}.zip"
     )
 
-    if MAX_DOWNLOADS == 1:
-        delete_file(code)
+    if downloads + 1 >= MAX_DOWNLOADS:
+        delete_files_only(code)
 
     return response, None
 
 
-# ================= DELETE FILE =================
-def delete_file(code):
+# ================= DELETE ONLY FILES =================
+def delete_files_only(code):
 
     folder_path = os.path.join(UPLOAD_FOLDER, code)
     zip_path = os.path.join(UPLOAD_FOLDER, f"{code}.zip")
     qr_path = os.path.join(STATIC_FOLDER, f"{code}.png")
-
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "DELETE FROM instantshare_files WHERE code = %s",
-            (code,)
-        )
-        conn.commit()
 
     if os.path.exists(folder_path):
         for file in os.listdir(folder_path):
@@ -246,3 +253,19 @@ def delete_file(code):
             os.remove(qr_path)
         except:
             pass
+
+
+# ================= DELETE FULL RECORD =================
+def delete_file(code):
+
+    ph = placeholder()
+
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            f"DELETE FROM {TABLE_NAME} WHERE code = {ph}",
+            (code,)
+        )
+        conn.commit()
+
+    delete_files_only(code)
