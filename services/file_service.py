@@ -28,7 +28,10 @@ def generate_code(length=6):
 
         with get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM files WHERE code = ?", (code,))
+            cursor.execute(
+                "SELECT 1 FROM instantshare_files WHERE code = %s",
+                (code,)
+            )
             exists = cursor.fetchone()
 
         if not exists:
@@ -42,13 +45,13 @@ def cleanup_expired_files():
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT code FROM files WHERE expires_at < ?",
+            "SELECT code FROM instantshare_files WHERE expires_at < %s",
             (current_time,)
         )
         expired = cursor.fetchall()
 
     for row in expired:
-        delete_file(row["code"])
+        delete_file(row[0])
 
 
 # ================= SAVE MULTIPLE FILES =================
@@ -87,14 +90,14 @@ def save_files(files, uploader_ip):
             file.save(os.path.join(folder_path, filename))
             total_size += size
 
-        # Insert record into DB
+        # Insert record into PostgreSQL
         with get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO files
+                INSERT INTO instantshare_files
                 (code, filename, original_name, upload_time, expires_at,
                  downloads, created_date, uploader_ip, downloader_ip, file_size)
-                VALUES (?, ?, ?, ?, ?, 0, ?, ?, NULL, ?)
+                VALUES (%s, %s, %s, %s, %s, 0, %s, %s, NULL, %s)
             """, (
                 code,
                 code,  # folder name
@@ -109,7 +112,7 @@ def save_files(files, uploader_ip):
 
         generate_qr(code)
 
-    except Exception:
+    except Exception as e:
         delete_file(code)
         return None, "Upload failed."
 
@@ -119,7 +122,7 @@ def save_files(files, uploader_ip):
 # ================= GENERATE QR =================
 def generate_qr(code):
     try:
-        full_url = f"http://127.0.0.1:5000/download_direct/{code}"
+        full_url = f"/download_direct/{code}"
 
         qr = qrcode.make(full_url)
 
@@ -138,13 +141,16 @@ def process_download(code, downloader_ip):
 
     with get_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM files WHERE code = ?", (code,))
+        cursor.execute(
+            "SELECT * FROM instantshare_files WHERE code = %s",
+            (code,)
+        )
         file_info = cursor.fetchone()
 
         if not file_info:
             return None, "Invalid or expired code!"
 
-        if file_info["downloads"] >= MAX_DOWNLOADS:
+        if file_info[5] >= MAX_DOWNLOADS:
             delete_file(code)
             return None, "Download limit reached!"
 
@@ -156,10 +162,10 @@ def process_download(code, downloader_ip):
 
         # Update downloads + downloader IP
         cursor.execute("""
-            UPDATE files
+            UPDATE instantshare_files
             SET downloads = downloads + 1,
-                downloader_ip = ?
-            WHERE code = ?
+                downloader_ip = %s
+            WHERE code = %s
         """, (downloader_ip, code))
         conn.commit()
 
@@ -212,7 +218,10 @@ def delete_file(code):
 
     with get_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM files WHERE code = ?", (code,))
+        cursor.execute(
+            "DELETE FROM instantshare_files WHERE code = %s",
+            (code,)
+        )
         conn.commit()
 
     if os.path.exists(folder_path):
