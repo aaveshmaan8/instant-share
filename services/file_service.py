@@ -5,7 +5,7 @@ import string
 import zipfile
 import qrcode
 
-from flask import send_file
+from flask import send_file, request
 from werkzeug.utils import secure_filename
 
 from config import (
@@ -139,9 +139,10 @@ def save_files(files, uploader_ip):
             ))
             conn.commit()
 
+        # ✅ Generate QR with correct production URL
         generate_qr(code)
 
-        # 🔥 LOG UPLOAD IP
+        # ✅ Log upload IP
         log_ip_action(code, "UPLOAD", uploader_ip)
 
     except Exception as e:
@@ -151,10 +152,15 @@ def save_files(files, uploader_ip):
 
     return code, None
 
-# ================= GENERATE QR =================
+
+# ================= GENERATE QR (PRODUCTION SAFE) =================
 def generate_qr(code):
     try:
-        full_url = f"/download_direct/{code}"
+        # Automatically detect correct domain (local or Render)
+        base_url = request.host_url.rstrip("/")
+
+        full_url = f"{base_url}/download_direct/{code}"
+
         qr = qrcode.make(full_url)
 
         os.makedirs(STATIC_FOLDER, exist_ok=True)
@@ -205,7 +211,7 @@ def process_download(code, downloader_ip):
         """, (downloader_ip, code))
         conn.commit()
 
-        # 🔥 LOG DOWNLOAD IP
+        # ✅ Log download IP
         log_ip_action(code, "DOWNLOAD", downloader_ip)
 
     files = os.listdir(folder_path)
@@ -253,26 +259,14 @@ def delete_files_only(code):
     zip_path = os.path.join(UPLOAD_FOLDER, f"{code}.zip")
     qr_path = os.path.join(STATIC_FOLDER, f"{code}.png")
 
-    if os.path.exists(folder_path):
-        for file in os.listdir(folder_path):
-            try:
-                os.remove(os.path.join(folder_path, file))
-            except:
-                pass
+    for path in [folder_path, zip_path, qr_path]:
         try:
-            os.rmdir(folder_path)
-        except:
-            pass
-
-    if os.path.exists(zip_path):
-        try:
-            os.remove(zip_path)
-        except:
-            pass
-
-    if os.path.exists(qr_path):
-        try:
-            os.remove(qr_path)
+            if os.path.isdir(path):
+                for file in os.listdir(path):
+                    os.remove(os.path.join(path, file))
+                os.rmdir(path)
+            elif os.path.exists(path):
+                os.remove(path)
         except:
             pass
 
