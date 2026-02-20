@@ -1,5 +1,6 @@
 import os
 import time
+import pytz
 from datetime import datetime
 
 from flask import (
@@ -38,9 +39,13 @@ init_db()
 
 
 # ================= TEMPLATE FILTER =================
+
 @app.template_filter("datetime")
 def format_datetime(value):
-    return datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
+    utc_time = datetime.utcfromtimestamp(value)
+    ist = pytz.timezone("Asia/Kolkata")
+    local_time = utc_time.replace(tzinfo=pytz.utc).astimezone(ist)
+    return local_time.strftime("%Y-%m-%d %H:%M:%S")
 
 
 # ================= HELPERS =================
