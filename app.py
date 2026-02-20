@@ -1,5 +1,6 @@
 import os
 import time
+from datetime import datetime
 
 from flask import (
     Flask,
@@ -36,14 +37,18 @@ app.config["SECRET_KEY"] = SECRET_KEY
 init_db()
 
 
+# ================= TEMPLATE FILTER =================
+@app.template_filter("datetime")
+def format_datetime(value):
+    return datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
+
+
 # ================= HELPERS =================
 def is_postgres():
     return bool(DATABASE_URL)
 
 def placeholder():
     return "%s" if is_postgres() else "?"
-
-TABLE_NAME = "instantshare_files"
 
 
 # ================= HOME =================
@@ -79,7 +84,7 @@ def upload_ajax():
     })
 
 
-# ================= DOWNLOAD (FORM) =================
+# ================= DOWNLOAD =================
 @app.route("/download", methods=["POST"])
 def download():
 
@@ -122,7 +127,6 @@ def download_direct(code):
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
 
-    # If already logged in → go to dashboard
     if session.get("admin_logged_in"):
         return redirect(url_for("admin_dashboard"))
 
@@ -154,7 +158,6 @@ def admin_logout():
 @app.route("/admin")
 def admin_dashboard():
 
-    # 🔐 Protect route
     if not session.get("admin_logged_in"):
         return redirect(url_for("admin_login"))
 
@@ -162,6 +165,7 @@ def admin_dashboard():
     cursor = conn.cursor()
 
     current_time = int(time.time())
+    ph = placeholder()
 
     # Total uploads
     cursor.execute("SELECT COUNT(*) FROM files")
@@ -173,19 +177,19 @@ def admin_dashboard():
 
     # Active files
     cursor.execute(
-        "SELECT COUNT(*) FROM files WHERE expires_at > ?",
+        f"SELECT COUNT(*) FROM files WHERE expires_at > {ph}",
         (current_time,)
     )
     active_files = cursor.fetchone()[0]
 
     # Expired files
     cursor.execute(
-        "SELECT COUNT(*) FROM files WHERE expires_at < ?",
+        f"SELECT COUNT(*) FROM files WHERE expires_at < {ph}",
         (current_time,)
     )
     expired_files = cursor.fetchone()[0]
 
-    # Most downloaded file
+    # Most downloaded
     cursor.execute("""
         SELECT code, downloads
         FROM files
@@ -194,10 +198,19 @@ def admin_dashboard():
     """)
     most_downloaded = cursor.fetchone()
 
-    # Total storage used
+    # Storage used
     cursor.execute("SELECT COALESCE(SUM(file_size), 0) FROM files")
     total_storage = cursor.fetchone()[0]
     total_storage_mb = round(total_storage / (1024 * 1024), 2)
+
+    # Latest IP logs
+    cursor.execute("""
+        SELECT code, action, ip_address, action_time
+        FROM ip_logs
+        ORDER BY action_time DESC
+        LIMIT 10
+    """)
+    ip_logs = cursor.fetchall()
 
     conn.close()
 
@@ -208,7 +221,8 @@ def admin_dashboard():
         active_files=active_files,
         expired_files=expired_files,
         most_downloaded=most_downloaded,
-        total_storage=total_storage_mb
+        total_storage=total_storage_mb,
+        ip_logs=ip_logs
     )
 
 

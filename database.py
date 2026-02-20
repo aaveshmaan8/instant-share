@@ -1,22 +1,18 @@
 import os
 import sqlite3
 import psycopg2
-import psycopg2.extras
+
 from config import DATABASE_PATH
 
-# Detect Render PostgreSQL
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 
 # ================= GET CONNECTION =================
 def get_connection():
 
-    # ================= POSTGRESQL (Render) =================
     if DATABASE_URL:
-        conn = psycopg2.connect(DATABASE_URL)
-        return conn
+        return psycopg2.connect(DATABASE_URL)
 
-    # ================= SQLITE (Local) =================
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     return conn
@@ -28,7 +24,7 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
-    # ================= POSTGRESQL TABLE =================
+    # ================= FILES TABLE =================
     if DATABASE_URL:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS files (
@@ -46,7 +42,16 @@ def init_db():
             );
         """)
 
-    # ================= SQLITE TABLE =================
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS ip_logs (
+                id SERIAL PRIMARY KEY,
+                code VARCHAR(10),
+                action VARCHAR(20),
+                ip_address TEXT,
+                action_time BIGINT
+            );
+        """)
+
     else:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS files (
@@ -61,6 +66,16 @@ def init_db():
                 uploader_ip TEXT,
                 downloader_ip TEXT,
                 file_size INTEGER DEFAULT 0
+            );
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS ip_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                code TEXT,
+                action TEXT,
+                ip_address TEXT,
+                action_time INTEGER
             );
         """)
 

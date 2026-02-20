@@ -3,6 +3,49 @@
 <head>
     <title>Admin Dashboard - InstantShare</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .stats-box {
+            background: var(--bg-surface);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stats-box p {
+            margin: 8px 0;
+        }
+
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .admin-table th,
+        .admin-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .admin-table th {
+            background: var(--bg-surface);
+        }
+
+        .logout-btn {
+            background: var(--danger);
+            margin-top: 20px;
+        }
+
+        .logout-btn:hover {
+            opacity: 0.9;
+        }
+
+        .section-title {
+            margin-top: 30px;
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
 <body>
 
@@ -10,7 +53,8 @@
 
     <h2 style="text-align:center;">Admin Dashboard</h2>
 
-    <div style="margin-top:30px;">
+    <!-- ================= STATS ================= -->
+    <div class="stats-box">
 
         <p><strong>Total Uploads:</strong> {{ total_files }}</p>
         <p><strong>Total Downloads:</strong> {{ total_downloads }}</p>
@@ -21,18 +65,45 @@
         {% if most_downloaded %}
             <p>
                 <strong>Most Downloaded Code:</strong>
-                {{ most_downloaded['code'] }}
-                ({{ most_downloaded['downloads'] }} downloads)
+                {{ most_downloaded[0] }}
+                ({{ most_downloaded[1] }} downloads)
             </p>
         {% else %}
-            <p>No downloads yet.</p>
+            <p><strong>Most Downloaded Code:</strong> None</p>
         {% endif %}
-<a href="/admin/logout">
-    <button style="background:red;">Logout</button>
-</a>
 
+        <a href="{{ url_for('admin_logout') }}">
+            <button class="logout-btn">Logout</button>
+        </a>
 
     </div>
+
+    <!-- ================= IP HISTORY ================= -->
+    <h3 class="section-title">Recent IP Activity</h3>
+
+    {% if ip_logs and ip_logs|length > 0 %}
+        <table class="admin-table">
+            <tr>
+                <th>Code</th>
+                <th>Action</th>
+                <th>IP Address</th>
+                <th>Time</th>
+            </tr>
+
+            {% for log in ip_logs %}
+            <tr>
+                <td>{{ log[0] }}</td>
+                <td>{{ log[1] }}</td>
+                <td>{{ log[2] }}</td>
+                <td>
+                    {{ log[3] | int | datetime }}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>No IP activity yet.</p>
+    {% endif %}
 
 </div>
 

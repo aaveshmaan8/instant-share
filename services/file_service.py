@@ -31,6 +31,21 @@ def placeholder():
     return "%s" if is_postgres() else "?"
 
 
+# ================= LOG IP ACTION =================
+def log_ip_action(code, action, ip):
+    ph = placeholder()
+    current_time = int(time.time())
+
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            INSERT INTO ip_logs
+            (code, action, ip_address, action_time)
+            VALUES ({ph}, {ph}, {ph}, {ph})
+        """, (code, action, ip, current_time))
+        conn.commit()
+
+
 # ================= GENERATE UNIQUE CODE =================
 def generate_code(length=6):
     characters = string.ascii_uppercase + string.digits
@@ -126,13 +141,15 @@ def save_files(files, uploader_ip):
 
         generate_qr(code)
 
+        # 🔥 LOG UPLOAD IP
+        log_ip_action(code, "UPLOAD", uploader_ip)
+
     except Exception as e:
         print("UPLOAD ERROR:", e)
         delete_file(code)
         return None, str(e)
 
     return code, None
-
 
 # ================= GENERATE QR =================
 def generate_qr(code):
@@ -165,19 +182,21 @@ def process_download(code, downloader_ip):
         if not file_info:
             return None, "Invalid or expired code!"
 
-        # Get downloads count properly
         downloads = (
             file_info["downloads"]
             if not is_postgres()
             else file_info[6]
         )
 
+        if downloads >= MAX_DOWNLOADS:
+            delete_file(code)
+            return None, "Download limit reached!"
+
         folder_path = os.path.join(UPLOAD_FOLDER, code)
 
         if not os.path.exists(folder_path):
             return None, "Files not found!"
 
-        # Update download count
         cursor.execute(f"""
             UPDATE {TABLE_NAME}
             SET downloads = downloads + 1,
@@ -185,6 +204,9 @@ def process_download(code, downloader_ip):
             WHERE code = {ph}
         """, (downloader_ip, code))
         conn.commit()
+
+        # 🔥 LOG DOWNLOAD IP
+        log_ip_action(code, "DOWNLOAD", downloader_ip)
 
     files = os.listdir(folder_path)
 
@@ -224,7 +246,7 @@ def process_download(code, downloader_ip):
     return response, None
 
 
-# ================= DELETE ONLY FILES =================
+# ================= DELETE FILES ONLY =================
 def delete_files_only(code):
 
     folder_path = os.path.join(UPLOAD_FOLDER, code)
