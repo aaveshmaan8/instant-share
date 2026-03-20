@@ -58,7 +58,7 @@ def placeholder():
 
 # ================= HOME =================
 @app.route("/")
-def index():
+def home():
     return render_template("index.html")
 
 
