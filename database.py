@@ -5,26 +5,30 @@ import psycopg2.extras
 
 from config import DATABASE_PATH
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
-
 
 # ================= GET CONNECTION =================
 def get_connection():
 
-    DATABASE_URL = os.environ.get("DATABASE_URL")
+    database_url = os.environ.get("DATABASE_URL")
 
     # ===== PostgreSQL (Render) =====
-    if DATABASE_URL:
+    if database_url:
 
         # Fix old postgres:// issue
-        if DATABASE_URL.startswith("postgres://"):
-            DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-        conn = psycopg2.connect(
-            DATABASE_URL,
-            sslmode="require"
-        )
-        return conn
+        try:
+            conn = psycopg2.connect(
+                database_url,
+                sslmode="require",
+                connect_timeout=5   # 🔥 prevents hanging
+            )
+            return conn
+
+        except Exception as e:
+            print("❌ DB CONNECTION ERROR:", e)
+            raise e
 
     # ===== SQLite (Local) =====
     conn = sqlite3.connect(DATABASE_PATH)
@@ -39,8 +43,10 @@ def init_db():
         conn = get_connection()
         cursor = conn.cursor()
 
+        database_url = os.environ.get("DATABASE_URL")
+
         # ===== PostgreSQL =====
-        if DATABASE_URL:
+        if database_url:
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS files (
                     id SERIAL PRIMARY KEY,

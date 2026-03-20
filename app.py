@@ -18,8 +18,7 @@ from config import (
     SECRET_KEY,
     DEBUG,
     ADMIN_USERNAME,
-    ADMIN_PASSWORD,
-    DATABASE_URL
+    ADMIN_PASSWORD
 )
 
 from database import init_db, get_connection
@@ -35,11 +34,15 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE
 app.config["SECRET_KEY"] = SECRET_KEY
 
-init_db()
+
+# 🔥 SAFE DB INIT (NO FREEZE)
+try:
+    init_db()
+except Exception as e:
+    print("❌ DB INIT FAILED:", e)
 
 
 # ================= TEMPLATE FILTER =================
-
 @app.template_filter("datetime")
 def format_datetime(value):
     utc_time = datetime.utcfromtimestamp(value)
@@ -50,7 +53,7 @@ def format_datetime(value):
 
 # ================= HELPERS =================
 def is_postgres():
-    return bool(DATABASE_URL)
+    return bool(os.environ.get("DATABASE_URL"))
 
 def placeholder():
     return "%s" if is_postgres() else "?"
@@ -172,29 +175,24 @@ def admin_dashboard():
     current_time = int(time.time())
     ph = placeholder()
 
-    # Total uploads
     cursor.execute("SELECT COUNT(*) FROM files")
     total_files = cursor.fetchone()[0]
 
-    # Total downloads
     cursor.execute("SELECT COALESCE(SUM(downloads), 0) FROM files")
     total_downloads = cursor.fetchone()[0]
 
-    # Active files
     cursor.execute(
         f"SELECT COUNT(*) FROM files WHERE expires_at > {ph}",
         (current_time,)
     )
     active_files = cursor.fetchone()[0]
 
-    # Expired files
     cursor.execute(
         f"SELECT COUNT(*) FROM files WHERE expires_at < {ph}",
         (current_time,)
     )
     expired_files = cursor.fetchone()[0]
 
-    # Most downloaded
     cursor.execute("""
         SELECT code, downloads
         FROM files
@@ -203,12 +201,10 @@ def admin_dashboard():
     """)
     most_downloaded = cursor.fetchone()
 
-    # Storage used
     cursor.execute("SELECT COALESCE(SUM(file_size), 0) FROM files")
     total_storage = cursor.fetchone()[0]
     total_storage_mb = round(total_storage / (1024 * 1024), 2)
 
-    # Latest IP logs
     cursor.execute("""
         SELECT code, action, ip_address, action_time
         FROM ip_logs
